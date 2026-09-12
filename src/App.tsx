@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ExternalLink, MessageCircle } from 'lucide-react';
 import { User, Item, BorrowRequest, LineNotification } from './types';
 import {
   INITIAL_ITEMS,
@@ -19,6 +20,7 @@ import { RequestHistoryView } from './components/RequestHistoryView';
 import { ProfileView } from './components/ProfileView';
 import { LineLoginModal, RealLineProfile } from './components/LineLoginModal';
 import { RegisterModal } from './components/RegisterModal';
+import { LineFriendGate } from './components/LineFriendGate';
 import { BorrowModal } from './components/BorrowModal';
 import { AddItemModal } from './components/AddItemModal';
 import { LinePushToast } from './components/LinePushToast';
@@ -60,6 +62,9 @@ export default function App() {
   const [selectedBorrowItem, setSelectedBorrowItem] = useState<Item | null>(null);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [activePushToast, setActivePushToast] = useState<LineNotification | null>(null);
+  const [showFriendGate, setShowFriendGate] = useState(false);
+  const [friendGateUserId, setFriendGateUserId] = useState<string | null>(null);
+  const [notifFriendStatus, setNotifFriendStatus] = useState<'checking' | 'friend' | 'not-friend' | 'error' | null>(null);
 
   // Sync users to localStorage
   useEffect(() => {
@@ -77,6 +82,31 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('borrowhub_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Poll LINE OA friendship status when viewing Notifications tab
+  useEffect(() => {
+    if (currentTab === 'notifications' && currentUser?.lineUserId) {
+      const checkStatus = async () => {
+        try {
+          const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(currentUser.lineUserId)}`);
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || typeof data.isFriend !== 'boolean') {
+            setNotifFriendStatus('error');
+            return;
+          }
+          setNotifFriendStatus(data.isFriend ? 'friend' : 'not-friend');
+        } catch {
+          setNotifFriendStatus('error');
+        }
+      };
+      checkStatus();
+      const timer = setInterval(checkStatus, 3000);
+      return () => clearInterval(timer);
+    } else {
+      setNotifFriendStatus(null);
+    }
+  }, [currentTab, currentUser?.lineUserId]);
+
 
   // Sync auth user
   useEffect(() => {
@@ -124,8 +154,8 @@ export default function App() {
     }
   };
 
-  // For returning users: warn (in-app) if they have NOT added the LINE OA as friend.
-  const checkFriendshipAndWarn = async (userId: string) => {
+  // Force the user to add the LINE OA as a friend (when verifiable) before using the app.
+  const gateOnFriendship = async (userId: string) => {
     try {
       const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(userId)}`);
       const data = await res.json().catch(() => null);
@@ -140,7 +170,8 @@ export default function App() {
           read: false,
           recipientLineId: userId,
         };
-        notifyLocally(warnNotif);
+        setFriendGateUserId(userId);
+        setShowFriendGate(true);
       }
     } catch {
       // best-effort only; never break the login flow
@@ -167,7 +198,7 @@ export default function App() {
       setCurrentTab('home');
 
       // Verify the returning user still follows the LINE OA (for real pushes).
-      checkFriendshipAndWarn(updatedUser.lineUserId);
+      gateOnFriendship(updatedUser.lineUserId);
 
       const welcomeNotif: LineNotification = {
         id: `notif-${Date.now()}`,
@@ -193,6 +224,8 @@ export default function App() {
     setUsers((prev) => [...prev, newUser]);
     setCurrentUser(newUser);
     setCurrentTab('home');
+
+    gateOnFriendship(newUser.lineUserId);
 
     const welcomeNotif: LineNotification = {
       id: `notif-${Date.now()}`,
@@ -632,6 +665,25 @@ export default function App() {
         isOpen={showAddItemModal}
         onClose={() => setShowAddItemModal(false)}
         onAdd={handleAddItem}
+      />
+
+            {/* LINE OA friend gate: blocks until the user adds the OA as friend */}
+      <LineFriendGate
+        isOpen={showFriendGate}
+        userId={friendGateUserId}
+        oaName={LINE_CHANNEL_CONFIG.oaName}
+        oaAddFriendUrl={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
+        onFriendConfirmed={() => setShowFriendGate(false)}
+        onDegraded={() => setShowFriendGate(false)}
+      />
+{/* LINE OA friend gate: blocks until the user adds the OA as friend */}
+      <LineFriendGate
+        isOpen={showFriendGate}
+        userId={friendGateUserId}
+        oaName={LINE_CHANNEL_CONFIG.oaName}
+        oaAddFriendUrl={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
+        onFriendConfirmed={() => setShowFriendGate(false)}
+        onDegraded={() => setShowFriendGate(false)}
       />
 
       {/* Floating LINE Push Toast */}

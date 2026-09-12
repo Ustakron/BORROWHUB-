@@ -82,7 +82,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
 
     // Require the user to have added the LINE OA as a friend before registering
     // (only enforced when the server can verify friendship status).
-    if (friendStatus === 'not-friend') return;
+    if (friendStatus !== 'friend' && friendStatus !== 'error') return;
 
     const newUser: User = {
       id: `user-${Date.now()}`,
@@ -345,7 +345,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
           <div className="mt-6">
             <button
               type="submit"
-              disabled={friendStatus === 'not-friend'}
+              disabled={friendStatus !== 'friend' && friendStatus !== 'error'}
               className="w-full py-3.5 px-4 bg-[#1B365D] hover:bg-[#0F2444] text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#1B365D] disabled:active:scale-100"
             >
               <Sparkles className="w-4 h-4 text-[#F26522]" />
