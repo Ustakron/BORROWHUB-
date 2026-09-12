@@ -10,7 +10,6 @@ import {
   Bell,
   UserCheck,
   LogOut,
-  Info,
   Menu,
   X,
   ShieldAlert,
@@ -23,7 +22,6 @@ interface NavigationLayoutProps {
   onSelectTab: (tab: 'home' | 'catalog' | 'requests' | 'notifications' | 'profile') => void;
   currentUser: User;
   onLogout: () => void;
-  onOpenSystemInfo: () => void;
   notifications: LineNotification[];
   onMarkNotificationRead: (id: string) => void;
   onClearNotifications: () => void;
@@ -36,7 +34,6 @@ export const NavigationLayout: React.FC<NavigationLayoutProps> = ({
   onSelectTab,
   currentUser,
   onLogout,
-  onOpenSystemInfo,
   notifications,
   onMarkNotificationRead,
   onClearNotifications,
@@ -98,16 +95,6 @@ export const NavigationLayout: React.FC<NavigationLayoutProps> = ({
                 </button>
               );
             })}
-
-            <div className="pt-3 mt-3 border-t border-slate-100">
-              <button
-                onClick={onOpenSystemInfo}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-orange-50 hover:text-[#F26522] transition-colors"
-              >
-                <Info className="w-4 h-4 text-[#F26522]" />
-                <span>โครงสร้างระบบ (Step 11 & 12)</span>
-              </button>
-            </div>
           </nav>
         </div>
 
@@ -169,15 +156,6 @@ export const NavigationLayout: React.FC<NavigationLayoutProps> = ({
 
           {/* Right Header items */}
           <div className="flex items-center gap-3">
-            {/* Quick System Info button */}
-            <button
-              onClick={onOpenSystemInfo}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F26522] text-xs font-semibold border border-orange-200 transition-colors"
-            >
-              <Info className="w-3.5 h-3.5" />
-              <span>ภาพรวมระบบ (12 ขั้นตอน)</span>
-            </button>
-
             {/* Simulated LINE Notification Center */}
             <LineNotificationCenter
               notifications={notifications}
@@ -225,17 +203,7 @@ export const NavigationLayout: React.FC<NavigationLayoutProps> = ({
               );
             })}
 
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-              <button
-                onClick={() => {
-                  onOpenSystemInfo();
-                  setMobileMenuOpen(false);
-                }}
-                className="text-[#F26522] font-semibold flex items-center gap-1.5 py-1"
-              >
-                <Info className="w-4 h-4" />
-                <span>ดู 12 ขั้นตอนตามภาพ</span>
-              </button>
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-end text-xs">
               <button
                 onClick={onLogout}
                 className="text-rose-600 font-semibold flex items-center gap-1 py-1"

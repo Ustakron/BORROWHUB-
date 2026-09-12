@@ -4,6 +4,8 @@
     { "source": "/api/auth/line/url", "destination": "/api/line-url" },
     { "source": "/auth/callback", "destination": "/api/line-callback" },
     { "source": "/auth/callback/", "destination": "/api/line-callback" },
+    { "source": "/api/line/push", "destination": "/api/line-push" },
+    { "source": "/api/line/friendship", "destination": "/api/line-friendship" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

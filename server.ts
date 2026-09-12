@@ -11,8 +11,10 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011554399';
-const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '90bc8c44027203495663b57c69fdb135';
+const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011570170';
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'cf0c2877970de62b8f7f0a3d636faed4';
+// Long-lived Channel Access Token for the Messaging API (push messages).
+const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 
 // Helper to determine redirect URI
 function getRedirectUri(req: express.Request): string {
@@ -203,6 +205,69 @@ const handleOAuthCallback = async (req: express.Request, res: express.Response) 
 
 app.get('/auth/callback', handleOAuthCallback);
 app.get('/auth/callback/', handleOAuthCallback);
+
+// Real LINE Messaging API push (local dev parity with api/line-push.ts on Vercel)
+app.post('/api/line/push', async (req, res) => {
+  const { userId, title, message } = req.body || {};
+  if (!LINE_CHANNEL_ACCESS_TOKEN) {
+    return res.status(503).json({ ok: false, error: 'LINE_CHANNEL_ACCESS_TOKEN is not configured' });
+  }
+  if (!userId || !title || !message) {
+    return res.status(400).json({ ok: false, error: 'Missing required fields: userId, title, message' });
+  }
+  try {
+    const pushResponse = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+      },
+      body: JSON.stringify({
+        to: userId,
+        messages: [{ type: 'text', text: `[BORROW HUB] ${title}\n\n${message}` }],
+      }),
+    });
+    const pushData: any = await pushResponse.json().catch(() => ({}));
+    if (!pushResponse.ok) {
+      console.error('LINE push error:', pushResponse.status, pushData);
+      return res
+        .status(pushResponse.status)
+        .json({ ok: false, error: pushData?.message || 'LINE push failed' });
+    }
+    res.json({ ok: true, sentTo: userId });
+  } catch (err: any) {
+    console.error('LINE push exception:', err);
+    res.status(500).json({ ok: false, error: err.message || 'Unknown error' });
+  }
+});
+
+// Friendship status check (local dev parity with api/line-friendship.ts on Vercel)
+app.get('/api/line/friendship', async (req, res) => {
+  if (!LINE_CHANNEL_ACCESS_TOKEN) {
+    return res.status(503).json({ ok: false, isFriend: null, error: 'LINE_CHANNEL_ACCESS_TOKEN is not configured' });
+  }
+  const userId = req.query.userId as string | undefined;
+  if (!userId) {
+    return res.status(400).json({ ok: false, isFriend: null, error: 'userId is required' });
+  }
+  try {
+    const statusResponse = await fetch(
+      `https://api.line.me/v2/bot/friendship/status?user_id=${encodeURIComponent(userId)}`,
+      { headers: { Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}` } }
+    );
+    const statusData: any = await statusResponse.json().catch(() => ({}));
+    if (!statusResponse.ok) {
+      console.error('LINE friendship check error:', statusResponse.status, statusData);
+      return res
+        .status(statusResponse.status)
+        .json({ ok: false, isFriend: null, error: statusData?.message || 'LINE friendship check failed' });
+    }
+    res.json({ ok: true, isFriend: statusData.friendFlag === true });
+  } catch (err: any) {
+    console.error('LINE friendship check exception:', err);
+    res.status(500).json({ ok: false, isFriend: null, error: err.message || 'Unknown error' });
+  }
+});
 
 // API Health
 app.get('/api/health', (req, res) => {

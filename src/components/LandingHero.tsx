@@ -1,17 +1,15 @@
 import React from 'react';
 import { BorrowHubLogo } from './BorrowHubLogo';
 import { LINE_CHANNEL_CONFIG } from '../data/mockData';
-import { ArrowRight, ShieldCheck, CheckCircle2, Clock, Smartphone, Info } from 'lucide-react';
+import { ArrowRight, ShieldCheck, CheckCircle2, Clock, Smartphone } from 'lucide-react';
 
 interface LandingHeroProps {
   onStartLineLogin: () => void;
-  onOpenSystemInfo: () => void;
   isLoading?: boolean;
 }
 
 export const LandingHero: React.FC<LandingHeroProps> = ({
   onStartLineLogin,
-  onOpenSystemInfo,
   isLoading = false,
 }) => {
   return (
@@ -27,13 +25,6 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
           <span>{LINE_CHANNEL_CONFIG.schoolName}</span>
           <span className="text-slate-400 font-normal">| งานพัสดุและสารสนเทศ</span>
         </div>
-        <button
-          onClick={onOpenSystemInfo}
-          className="text-xs text-slate-500 hover:text-[#1B365D] flex items-center gap-1 font-medium transition-colors"
-        >
-          <Info className="w-3.5 h-3.5 text-[#F26522]" />
-          <span>โครงสร้างระบบ (Step 11 & 12)</span>
-        </button>
       </div>
 
       {/* Center Hero (Step 1 in Image 1: เข้าสู่หน้าเว็บไซต์ BORROW HUB) */}

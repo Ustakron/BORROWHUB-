@@ -20,7 +20,6 @@ import { ProfileView } from './components/ProfileView';
 import { LineLoginModal, RealLineProfile } from './components/LineLoginModal';
 import { RegisterModal } from './components/RegisterModal';
 import { BorrowModal } from './components/BorrowModal';
-import { SystemInfoModal } from './components/SystemInfoModal';
 import { AddItemModal } from './components/AddItemModal';
 import { LinePushToast } from './components/LinePushToast';
 
@@ -59,7 +58,6 @@ export default function App() {
   const [pendingLineProfile, setPendingLineProfile] = useState<RealLineProfile | null>(null);
   const [showBorrowModal, setShowBorrowModal] = useState(false);
   const [selectedBorrowItem, setSelectedBorrowItem] = useState<Item | null>(null);
-  const [showSystemInfoModal, setShowSystemInfoModal] = useState(false);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [activePushToast, setActivePushToast] = useState<LineNotification | null>(null);
 
@@ -89,10 +87,64 @@ export default function App() {
     }
   }, [currentUser]);
 
-  // Push notification trigger
-  const triggerLinePush = (notif: LineNotification) => {
+  // Fire-and-forget real LINE push via the api/line-push serverless function.
+  // If the Channel Access Token is not configured yet, the serverless function
+  // returns 503 and we only log it (in-app notifications still work).
+  const sendLinePush = async (userId: string, title: string, message: string) => {
+    try {
+      const response = await fetch('/api/line/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, title, message }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        console.warn('[LINE push] ยังไม่ได้ส่งเข้า LINE:', data?.error || `HTTP ${response.status}`);
+      } else {
+        console.log('[LINE push] ส่งสําเร็จ ถึง LINE user', userId.slice(0, 6) + '…');
+      }
+    } catch (err) {
+      console.warn('[LINE push] เกิดข้อผิดพลาดในการเชื่อมต่อ:', err);
+    }
+  };
+
+  // In-app local notification only (no real LINE push)
+  const notifyLocally = (notif: LineNotification) => {
     setNotifications((prev) => [notif, ...prev]);
     setActivePushToast(notif);
+  };
+
+  // Push notification trigger (in-app + real LINE Messaging API push)
+  const triggerLinePush = (notif: LineNotification) => {
+    notifyLocally(notif);
+
+    // Also send the real LINE OA notification to the recipient's LINE account.
+    if (notif.recipientLineId) {
+      sendLinePush(notif.recipientLineId, notif.title, notif.message);
+    }
+  };
+
+  // For returning users: warn (in-app) if they have NOT added the LINE OA as friend.
+  const checkFriendshipAndWarn = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) return; // token not configured yet -> skip quietly
+      if (data.isFriend === false) {
+        const warnNotif: LineNotification = {
+          id: `notif-${Date.now()}`,
+          title: 'ยังไม่ได้แอดเพื่อน LINE OA 💬',
+          message: `กรุณาเพิ่มเพื่อน ${LINE_CHANNEL_CONFIG.oaName} เพื่อรับการแจ้งเตือนยืม-คืน\nลิงก์: ${LINE_CHANNEL_CONFIG.oaAddFriendUrl}`,
+          type: 'system',
+          timestamp: 'เมื่อสักครู่',
+          read: false,
+          recipientLineId: userId,
+        };
+        notifyLocally(warnNotif);
+      }
+    } catch {
+      // best-effort only; never break the login flow
+    }
   };
 
   // REAL LINE LOGIN SUCCESS HANDLER
@@ -113,6 +165,9 @@ export default function App() {
       setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
       setCurrentUser(updatedUser);
       setCurrentTab('home');
+
+      // Verify the returning user still follows the LINE OA (for real pushes).
+      checkFriendshipAndWarn(updatedUser.lineUserId);
 
       const welcomeNotif: LineNotification = {
         id: `notif-${Date.now()}`,
@@ -388,10 +443,7 @@ export default function App() {
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#F8FAFC]">
-        <LandingHero
-          onStartLineLogin={() => setShowLineLoginModal(true)}
-          onOpenSystemInfo={() => setShowSystemInfoModal(true)}
-        />
+        <LandingHero onStartLineLogin={() => setShowLineLoginModal(true)} />
 
         <LineLoginModal
           isOpen={showLineLoginModal}
@@ -409,10 +461,6 @@ export default function App() {
           }}
         />
 
-        <SystemInfoModal
-          isOpen={showSystemInfoModal}
-          onClose={() => setShowSystemInfoModal(false)}
-        />
       </div>
     );
   }
@@ -435,7 +483,6 @@ export default function App() {
       onSelectTab={(tab) => setCurrentTab(tab)}
       currentUser={currentUser}
       onLogout={handleLogout}
-      onOpenSystemInfo={() => setShowSystemInfoModal(true)}
       notifications={notifications}
       onMarkNotificationRead={handleMarkNotificationRead}
       onClearNotifications={handleClearNotifications}
@@ -579,11 +626,6 @@ export default function App() {
           setSelectedBorrowItem(null);
         }}
         onSubmit={handleSubmitBorrowRequest}
-      />
-
-      <SystemInfoModal
-        isOpen={showSystemInfoModal}
-        onClose={() => setShowSystemInfoModal(false)}
       />
 
       <AddItemModal

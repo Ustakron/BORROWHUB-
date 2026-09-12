@@ -9,8 +9,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011554399';
-const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '90bc8c44027203495663b57c69fdb135';
+const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011570170';
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'cf0c2877970de62b8f7f0a3d636faed4';
 
 /** Determine the public base URL of the current deployment. */
 function getBaseUrl(req: VercelRequest): string {
