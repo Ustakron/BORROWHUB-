@@ -23,6 +23,11 @@ export interface Item {
   currentBorrowerRoom?: string;
   currentBorrowPeriod?: string;
   currentDueDate?: string;
+  // เจ้าของของ (เมื่อเพิ่มโดยผู้ใช้ทั่วไป ไม่ใช่ admin)
+  ownerId?: string;
+  ownerName?: string;
+  // ของที่เจ้าของเพิ่มจะต้องได้รับการอนุมัติจากเจ้าของก่อนจึงแสดงในแคตตาล็อก
+  ownerApproved?: boolean;
 }
 
 export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'borrowed' | 'returned' | 'overdue';
