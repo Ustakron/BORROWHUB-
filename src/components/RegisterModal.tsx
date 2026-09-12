@@ -222,7 +222,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                     onChange={(e) => setRoom(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-[#1B365D]/20"
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((num) => (
                       <option key={num} value={String(num)}>
                         ห้อง {num}
                       </option>

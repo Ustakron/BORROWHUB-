@@ -676,15 +676,6 @@ export default function App() {
         onFriendConfirmed={() => setShowFriendGate(false)}
         onDegraded={() => setShowFriendGate(false)}
       />
-{/* LINE OA friend gate: blocks until the user adds the OA as friend */}
-      <LineFriendGate
-        isOpen={showFriendGate}
-        userId={friendGateUserId}
-        oaName={LINE_CHANNEL_CONFIG.oaName}
-        oaAddFriendUrl={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
-        onFriendConfirmed={() => setShowFriendGate(false)}
-        onDegraded={() => setShowFriendGate(false)}
-      />
 
       {/* Floating LINE Push Toast */}
       <LinePushToast

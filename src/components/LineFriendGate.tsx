@@ -113,7 +113,7 @@ export const LineFriendGate: React.FC<LineFriendGateProps> = ({
                     ? 'กำลังเปิด BORROW HUB...'
                     : status === 'checking'
                     ? 'กำลังตรวจสอบสถานะเพื่อน...'
-                    : Open LINE and tap "เพิ่มเพื่อน" — ระบบจะตรวจสอบอัตโนมัติทุก 3 วินาที}
+                    : 'Open LINE and tap "เพิ่มเพื่อน" — ระบบจะตรวจสอบอัตโนมัติทุก 3 วินาที'}
                 </p>
               </div>
             </div>
