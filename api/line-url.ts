@@ -11,7 +11,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011570170';
+// The channel used for LINE Login (OAuth authorize URL).
+const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011554399';
 
 /** Determine the public base URL of the current deployment. */
 function getBaseUrl(req: VercelRequest): string {

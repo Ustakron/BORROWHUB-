@@ -11,8 +11,13 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011570170';
-const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'cf0c2877970de62b8f7f0a3d636faed4';
+// LINE Login uses its own channel (2011554399).
+// Push messaging uses a SEPARATE Messaging API channel, which must be
+// LINKED to this channel via the console: LINE Login tab → "Linking bot"
+// → enter the bot (Messaging API) channel ID. Then user IDs match and
+// the bot's access token (LINE_CHANNEL_ACCESS_TOKEN) can push to users.
+const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011554399';
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '90bc8c44027203495663b57c69fdb135';
 // Long-lived Channel Access Token for the Messaging API (push messages).
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 

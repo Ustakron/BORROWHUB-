@@ -9,8 +9,12 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011570170';
-const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'cf0c2877970de62b8f7f0a3d636faed4';
+// The channel used for LINE Login (token exchange + profile fetch).
+// Push messages are sent via a separately linked Messaging API bot channel
+// (see .env.example: LINKING BOT). The bot's access token must be a friend
+// of the right OA; user IDs match because the channels are linked.
+const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011554399';
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '90bc8c44027203495663b57c69fdb135';
 
 /** Determine the public base URL of the current deployment. */
 function getBaseUrl(req: VercelRequest): string {

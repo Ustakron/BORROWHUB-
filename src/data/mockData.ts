@@ -1,20 +1,19 @@
 import { Item, BorrowRequest, User, LineNotification } from '../types';
 
 export const LINE_CHANNEL_CONFIG = {
-  channelId: '2011570170',
+  channelId: '2011554399', // LINE Login channel (linked to bot 2011570170 for push)
   channelName: 'BORROW HUB',
   channelDescription: 'ระบบยืมคืนโรงเรียนสระแก้ว',
   email: 'playparkseson2@gmail.com',
   region: 'Thailand',
-  channelSecret: 'cf0c2877970de62b8f7f0a3d636faed4',
+  channelSecret: '90bc8c44027203495663b57c69fdb135',
   defaultUserId: 'U33a06f9b4e2e0bac95284f0f235591f3',
   schoolName: 'โรงเรียนสระแก้ว',
   schoolProvince: 'จังหวัดสระแก้ว',
   // ชื่อ LINE Official Account (สำหรับแสดงในขั้นตอนแอดเพื่อน)
   oaName: 'BORROW HUB',
-  // ลิงก์ "เพิ่มเพื่อน" LINE OA — ต้องเปลี่ยน @borrowhub เป็น handle ของ OA จริง
-  // (หาได้ที่ LINE Official Account Manager → ปุ่มเพิ่มเพื่อน)
-  oaAddFriendUrl: 'https://line.me/R/ti/p/@borrowhub',
+  // ลิงก์ "เพิ่มเพื่อน" LINE OA จริง — @756bxjku คือ OA ที่ link กับ LINE Login 2011554399
+  oaAddFriendUrl: 'https://line.me/R/ti/p/@756bxjku',
 };
 
 export const INITIAL_USERS: User[] = [
