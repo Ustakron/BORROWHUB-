@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, BorrowRequest } from '../types';
 import { LINE_CHANNEL_CONFIG } from '../data/mockData';
-import { UserCheck, ShieldCheck, Mail, Phone, School, Award, Clock, CheckCircle2, AlertTriangle, Save } from 'lucide-react';
+import { UserCheck, ShieldCheck, Mail, Phone, School, Award, Clock, CheckCircle2, AlertTriangle, Save, MessageCircle, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -17,6 +17,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [name, setName] = useState(currentUser.name);
   const [phone, setPhone] = useState(currentUser.phone || '081-234-5678');
   const [isSaved, setIsSaved] = useState(false);
+
+  // LINE OA friendship: 'checking' | 'friend' | 'not-friend' | 'error'
+  const [friendStatus, setFriendStatus] = useState<'checking' | 'friend' | 'not-friend' | 'error'>('checking');
+
+  const checkFriendship = async () => {
+    if (!currentUser.lineUserId) {
+      setFriendStatus('error');
+      return;
+    }
+    try {
+      setFriendStatus((prev) => (prev === 'not-friend' || prev === 'error' ? prev : 'checking'));
+      const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(currentUser.lineUserId)}`);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || typeof data.isFriend !== 'boolean') {
+        setFriendStatus('error');
+        return;
+      }
+      setFriendStatus(data.isFriend ? 'friend' : 'not-friend');
+    } catch {
+      setFriendStatus('error');
+    }
+  };
+
+  useEffect(() => {
+    checkFriendship();
+    const timer = setInterval(checkFriendship, 10000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.lineUserId]);
 
   const completedReturns = userRequests.filter((r) => r.status === 'returned').length;
   const currentActive = userRequests.filter((r) => r.status === 'borrowed' || r.status === 'overdue').length;
@@ -72,6 +101,70 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded-md border border-emerald-200">
                 {currentUser.lineUserId}
               </span>
+            </div>
+
+            {/* LINE OA friend status — shows whether the user added the OA, with an Add button */}
+            <div
+              className={`mt-3 p-3 rounded-xl border inline-flex flex-wrap items-center gap-3 text-xs ${
+                friendStatus === 'friend'
+                  ? 'bg-emerald-50/70 border-emerald-200/70 text-emerald-800'
+                  : friendStatus === 'not-friend'
+                  ? 'bg-[#06C755]/5 border-[#06C755]/40 text-slate-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}
+            >
+              <span className="flex items-center gap-1.5 font-bold">
+                {friendStatus === 'friend' ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName} แล้ว ✅</span>
+                  </>
+                ) : friendStatus === 'not-friend' ? (
+                  <>
+                    <MessageCircle className="w-4 h-4 text-[#06C755]" />
+                    <span>ยังไม่ได้เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}</span>
+                  </>
+                ) : friendStatus === 'checking' ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+                    <span>กำลังตรวจสอบสถานะเพื่อน LINE OA...</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <span>ตรวจสอบสถานะเพื่อนไม่ได้ (ยังไม่ตั้งค่า Token) — ยังรับแจ้งเตือนผ่านเว็บได้</span>
+                  </>
+                )}
+              </span>
+              {friendStatus === 'not-friend' && (
+                <span className="flex items-center gap-2">
+                  <a
+                    href={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={checkFriendship}
+                    className="text-[11px] font-semibold text-[#06C755] hover:underline"
+                  >
+                    ↻ ตรวจสอบอีกครั้ง
+                  </button>
+                </span>
+              )}
+              {friendStatus === 'error' && (
+                <button
+                  type="button"
+                  onClick={checkFriendship}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:underline"
+                >
+                  <RefreshCw className="w-3 h-3" /> ลองตรวจสอบอีกครั้ง
+                </button>
+              )}
             </div>
           </div>
         </div>

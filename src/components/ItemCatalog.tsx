@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Item, ItemCategory } from '../types';
-import { Search, Filter, MapPin, CheckCircle2, Clock, AlertCircle, Plus } from 'lucide-react';
+import { Search, Filter, MapPin, CheckCircle2, Clock, AlertCircle, Plus, ImageOff } from 'lucide-react';
 
 interface ItemCatalogProps {
   items: Item[];
@@ -18,6 +18,15 @@ export const ItemCatalog: React.FC<ItemCatalogProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'available' | 'borrowed'>('all');
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+
+  const markBroken = (id: string) =>
+    setBrokenImages((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
 
   const categories: { key: ItemCategory; label: string }[] = [
     { key: 'all', label: 'ทั้งหมด' },
@@ -168,12 +177,20 @@ export const ItemCatalog: React.FC<ItemCatalogProps> = ({
               >
                 {/* Image & Badges */}
                 <div className="relative aspect-4/3 bg-slate-100 overflow-hidden">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
+                  {brokenImages.has(item.id) ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-slate-400 bg-slate-100">
+                      <ImageOff className="w-8 h-8" />
+                      <span className="text-[11px] font-medium px-3 text-center">รูปภาพไม่พร้อมใช้งาน</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      onError={() => markBroken(item.id)}
+                    />
+                  )}
                   <div className="absolute top-2.5 left-2.5">
                     <span className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[11px] font-medium">
                       {item.categoryLabel}

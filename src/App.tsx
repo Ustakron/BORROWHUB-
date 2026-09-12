@@ -40,7 +40,14 @@ export default function App() {
 
   const [items, setItems] = useState<Item[]>(() => {
     const saved = localStorage.getItem('borrowhub_items');
-    return saved ? JSON.parse(saved) : INITIAL_ITEMS;
+    const parsed: Item[] = saved ? JSON.parse(saved) : INITIAL_ITEMS;
+    // Migrate cached items that still point to the old broken football image URL.
+    const BROKEN_IMG = 'photo-1553356084-58ef4a67b2a7';
+    const FIXED_IMG =
+      'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=500&auto=format&fit=crop&q=80';
+    return parsed.map((it) =>
+      it.image && it.image.includes(BROKEN_IMG) ? { ...it, image: FIXED_IMG } : it,
+    );
   });
 
   const [requests, setRequests] = useState<BorrowRequest[]>(() => {
