@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Item, User, BorrowRequest } from '../types';
 import { Send, Calendar, Clock, MapPin, AlertCircle, X } from 'lucide-react';
+import { SafeImage } from './SafeImage';
 
 interface BorrowModalProps {
   isOpen: boolean;
@@ -84,7 +85,7 @@ export const BorrowModal: React.FC<BorrowModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6">
           {/* Item Preview Card (Matching Step 8 in Image 1) */}
           <div className="flex items-center gap-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 mb-5">
-            <img
+            <SafeImage
               src={item.image}
               alt={item.name}
               className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0"

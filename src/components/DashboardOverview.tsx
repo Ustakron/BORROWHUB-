@@ -2,6 +2,7 @@ import React from 'react';
 import { User, BorrowRequest, Item } from '../types';
 import { Package, Clock, CheckCircle2, AlertTriangle, ArrowRight, Calendar, User as UserIcon, BellRing, Sparkles } from 'lucide-react';
 import { BorrowHubLogo } from './BorrowHubLogo';
+import { SafeImage } from './SafeImage';
 
 interface DashboardOverviewProps {
   currentUser: User;
@@ -190,7 +191,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
-                      <img
+                      <SafeImage
                         src={req.itemImage}
                         alt={req.itemName}
                         className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0"
@@ -269,7 +270,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <img
+                    <SafeImage
                       src={item.image}
                       alt={item.name}
                       className="w-10 h-10 rounded-lg object-cover border border-slate-200"

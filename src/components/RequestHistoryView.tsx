@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BorrowRequest, RequestStatus, User } from '../types';
 import { Clock, CheckCircle2, XCircle, AlertTriangle, ArrowRight, UserCheck, MessageSquare, Send, Calendar, Check } from 'lucide-react';
+import { SafeImage } from './SafeImage';
 
 interface RequestHistoryViewProps {
   requests: BorrowRequest[];
@@ -179,7 +180,7 @@ export const RequestHistoryView: React.FC<RequestHistoryViewProps> = ({
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-slate-100">
                 {/* Item & Borrower Info */}
                 <div className="flex items-start gap-4">
-                  <img
+                  <SafeImage
                     src={req.itemImage}
                     alt={req.itemName}
                     className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"

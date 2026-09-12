@@ -11,6 +11,8 @@ import {
   INITIAL_REQUESTS,
   INITIAL_NOTIFICATIONS,
   LINE_CHANNEL_CONFIG,
+  BROKEN_ITEM_IMAGES,
+  FOOTBALL_IMAGE_URL,
 } from './data/mockData';
 import { NavigationLayout } from './components/NavigationLayout';
 import { LandingHero } from './components/LandingHero';
@@ -22,7 +24,7 @@ import { LineLoginModal, RealLineProfile } from './components/LineLoginModal';
 import { RegisterModal } from './components/RegisterModal';
 import { LineFriendGate } from './components/LineFriendGate';
 import { BorrowModal } from './components/BorrowModal';
-import { AddItemModal } from './components/AddItemModal';
+import { LendingItemModal } from './components/LendingItemModal';
 import { LinePushToast } from './components/LinePushToast';
 
 export default function App() {
@@ -41,13 +43,13 @@ export default function App() {
   const [items, setItems] = useState<Item[]>(() => {
     const saved = localStorage.getItem('borrowhub_items');
     const parsed: Item[] = saved ? JSON.parse(saved) : INITIAL_ITEMS;
-    // Migrate cached items that still point to the old broken football image URL.
-    const BROKEN_IMG = 'photo-1553356084-58ef4a67b2a7';
-    const FIXED_IMG =
-      'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=500&auto=format&fit=crop&q=80';
-    return parsed.map((it) =>
-      it.image && it.image.includes(BROKEN_IMG) ? { ...it, image: FIXED_IMG } : it,
-    );
+    // Migrate cached items that still point to old broken image URLs
+    // (รวมถึงรูปลูกฟุตบอล Molten ที่โหลดไม่ได้ในบางเบราว์เซอร์/เครือข่าย)
+    return parsed.map((it) => {
+      if (!it.image) return it;
+      const isBroken = BROKEN_ITEM_IMAGES.some((broken) => it.image.includes(broken));
+      return isBroken ? { ...it, image: FOOTBALL_IMAGE_URL } : it;
+    });
   });
 
   const [requests, setRequests] = useState<BorrowRequest[]>(() => {
@@ -67,7 +69,8 @@ export default function App() {
   const [pendingLineProfile, setPendingLineProfile] = useState<RealLineProfile | null>(null);
   const [showBorrowModal, setShowBorrowModal] = useState(false);
   const [selectedBorrowItem, setSelectedBorrowItem] = useState<Item | null>(null);
-  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [showLendingModal, setShowLendingModal] = useState(false);
+  const [editingLendingItem, setEditingLendingItem] = useState<Item | null>(null);
   const [activePushToast, setActivePushToast] = useState<LineNotification | null>(null);
   const [showFriendGate, setShowFriendGate] = useState(false);
   const [friendGateUserId, setFriendGateUserId] = useState<string | null>(null);
@@ -486,13 +489,64 @@ export default function App() {
     triggerLinePush(reminderNotif);
   };
 
-  const handleAddItem = (newItem: Item) => {
+  // เพิ่ม/แก้ไขของที่ให้ยืม — ทุกคน (นักเรียน / ครู) เพิ่มของตนเองได้
+  const handleSaveItem = (savedItem: Item) => {
     if (!currentUser) return;
-    setItems((prev) => [newItem, ...prev]);
+    const exists = items.some((i) => i.id === savedItem.id);
+
+    if (exists) {
+      setItems((prev) => prev.map((i) => (i.id === savedItem.id ? savedItem : i)));
+      // อัปเดตรูป/ชื่อในคำขอยืมที่ยัง pending ด้วย
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.itemId === savedItem.id && r.status === 'pending'
+            ? { ...r, itemName: savedItem.name, itemImage: savedItem.image, itemCategory: savedItem.categoryLabel }
+            : r,
+        ),
+      );
+    } else {
+      setItems((prev) => [savedItem, ...prev]);
+    }
+
     const notif: LineNotification = {
       id: `notif-${Date.now()}`,
-      title: `เพิ่มอุปกรณ์ใหม่: ${newItem.name}`,
-      message: `เพิ่มเข้าระบบ BORROW HUB หมวดหมู่ ${newItem.categoryLabel} เรียบร้อยแล้ว`,
+      title: exists ? `แก้ไขข้อมูลของที่ให้ยืมแล้ว: ${savedItem.name}` : `เพิ่มของให้ยืมใหม่แล้ว: ${savedItem.name}`,
+      message: exists
+        ? `แก้ไขข้อมูลของ "${savedItem.name}" เรียบร้อยแล้ว หมวดหมู่ ${savedItem.categoryLabel}`
+        : `${currentUser.name} เพิ่มของ "${savedItem.name}" หมวดหมู่ ${savedItem.categoryLabel} จุดรับคืน ${savedItem.location} เข้าระบบ BORROW HUB แล้ว`,
+      type: 'system',
+      timestamp: 'เมื่อสักครู่',
+      read: false,
+      recipientLineId: currentUser.lineUserId,
+    };
+    triggerLinePush(notif);
+  };
+
+  // ลบของที่ให้ยืม — เจ้าของของ หรือ admin เท่านั้น (และต้องไม่มีผู้ยืมอยู่)
+  const handleDeleteItem = (item: Item) => {
+    if (!currentUser) return;
+    const target = items.find((i) => i.id === item.id);
+    if (!target) return;
+    const canDelete =
+      currentUser.role === 'admin' || (target.ownerId && target.ownerId === currentUser.id);
+    if (!canDelete) {
+      window.alert('คุณสามารถลบได้เฉพาะของของคุณเองเท่านั้น');
+      return;
+    }
+    if (target.status === 'borrowed') {
+      window.alert('ลบของไม่ได้ขณะที่มีผู้ยืมอยู่ กรุณารอผู้ยืมส่งคืนก่อน');
+      return;
+    }
+    if (!window.confirm(`ยืนยันลบของ "${target.name}" ออกจากระบบ BORROW HUB?`)) return;
+
+    setItems((prev) => prev.filter((i) => i.id !== target.id));
+    // ลบคำขอยืมที่ยังรออนุมัติของของนี้ด้วย
+    setRequests((prev) => prev.filter((r) => !(r.itemId === target.id && r.status === 'pending')));
+
+    const notif: LineNotification = {
+      id: `notif-${Date.now()}`,
+      title: `ลบของที่ให้ยืมแล้ว: ${target.name}`,
+      message: `ของ "${target.name}" ถูกลบออกจากระบบ BORROW HUB เรียบร้อยแล้ว`,
       type: 'system',
       timestamp: 'เมื่อสักครู่',
       read: false,
@@ -584,7 +638,16 @@ export default function App() {
         <ItemCatalog
           items={items}
           onSelectItemForBorrow={handleOpenBorrowModal}
-          onAddItem={() => setShowAddItemModal(true)}
+          onAddItem={() => {
+            setEditingLendingItem(null);
+            setShowLendingModal(true);
+          }}
+          onEditItem={(item) => {
+            setEditingLendingItem(item);
+            setShowLendingModal(true);
+          }}
+          onDeleteItem={handleDeleteItem}
+          currentUser={currentUser}
           isAdmin={currentUser.role === 'admin'}
         />
       )}
@@ -701,10 +764,15 @@ export default function App() {
         onSubmit={handleSubmitBorrowRequest}
       />
 
-      <AddItemModal
-        isOpen={showAddItemModal}
-        onClose={() => setShowAddItemModal(false)}
-        onAdd={handleAddItem}
+      <LendingItemModal
+        isOpen={showLendingModal}
+        onClose={() => {
+          setShowLendingModal(false);
+          setEditingLendingItem(null);
+        }}
+        onSave={handleSaveItem}
+        currentUser={currentUser}
+        editingItem={editingLendingItem}
       />
 
             {/* LINE OA friend gate: blocks until the user adds the OA as friend */}

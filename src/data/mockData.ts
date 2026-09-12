@@ -1,5 +1,26 @@
 import { Item, BorrowRequest, User, LineNotification } from '../types';
 
+// รูปลูกฟุตบอลหลัก (ยืนยันว่าโหลดได้จริงแล้ว) — photo เดิม photo-1579952363873-27f3bade9f55
+// และ photo-1553356084-58ef4a67b2a7 มีปัญหาโหลดไม่ได้ในบางเบราว์เซอร์/เครือข่าย
+export const FOOTBALL_IMAGE_URL =
+  'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=500&auto=format&fit=crop&q=80';
+
+// รายชื่อ photo ID เดิมที่เสีย (เก็บไว้เพื่อ migrate ข้อมูลเก่าใน localStorage)
+export const BROKEN_ITEM_IMAGES = [
+  'photo-1553356084-58ef4a67b2a7',
+  'photo-1579952363873-27f3bade9f55',
+];
+
+// รูปตัวอย่างสำหรับเลือกใช้เมื่อเพิ่ม/แก้ไขของที่ให้ยืม (ใช้ร่วมกันทั้งแอป)
+export const PRESET_ITEM_IMAGES: { label: string; url: string }[] = [
+  { label: 'ลูกฟุตบอล', url: FOOTBALL_IMAGE_URL },
+  { label: 'เครื่องคิดเลข', url: 'https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?w=500&auto=format&fit=crop&q=80' },
+  { label: 'กล้องถ่ายรูป', url: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&auto=format&fit=crop&q=80' },
+  { label: 'ไมโครโฟน', url: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=500&auto=format&fit=crop&q=80' },
+  { label: 'บาสเกตบอล', url: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=500&auto=format&fit=crop&q=80' },
+  { label: 'อุปกรณ์วิทย์', url: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=500&auto=format&fit=crop&q=80' },
+];
+
 export const LINE_CHANNEL_CONFIG = {
   channelId: '2011554399', // LINE Login channel (linked to bot 2011570170 for push)
   channelName: 'BORROW HUB',
@@ -62,7 +83,7 @@ export const INITIAL_ITEMS: Item[] = [
     code: 'SPT-002',
     category: 'sports',
     categoryLabel: 'กีฬา',
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=500&auto=format&fit=crop&q=80',
+    image: FOOTBALL_IMAGE_URL,
     location: 'ห้องพักครูกลุ่มสาระสุขศึกษาและพลศึกษา',
     status: 'available',
     condition: 'สภาพดี ความดันลมมาตรฐาน',
