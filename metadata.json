@@ -1,0 +1,6 @@
+{
+  "name": "BORROW HUB - ระบบยืมคืนโรงเรียนสระแก้ว",
+  "description": "ระบบศูนย์กลางการยืม-ให้ยืมสิ่งของภายในโรงเรียนสระแก้ว เชื่อมต่อ LINE Login และแจ้งเตือนสถานะการยืมคืน",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
