@@ -62,7 +62,7 @@ export const INITIAL_ITEMS: Item[] = [
     code: 'SPT-002',
     category: 'sports',
     categoryLabel: 'กีฬา',
-    image: 'https://images.unsplash.com/photo-1614632537197-3ce019c73338?w=500&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?w=500&auto=format&fit=crop&q=80',
     location: 'ห้องพักครูกลุ่มสาระสุขศึกษาและพลศึกษา',
     status: 'available',
     condition: 'สภาพดี ความดันลมมาตรฐาน',

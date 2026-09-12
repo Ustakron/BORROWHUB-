@@ -29,7 +29,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onA
 
   const presetImages = [
     { label: 'เครื่องคิดเลข', url: 'https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?w=500&auto=format&fit=crop&q=80' },
-    { label: 'ลูกฟุตบอล', url: 'https://images.unsplash.com/photo-1614632537197-3ce019c73338?w=500&auto=format&fit=crop&q=80' },
+    { label: 'ลูกฟุตบอล', url: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?w=500&auto=format&fit=crop&q=80' },
     { label: 'กล้องถ่ายรูป', url: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&auto=format&fit=crop&q=80' },
     { label: 'ไมโครโฟน', url: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=500&auto=format&fit=crop&q=80' },
     { label: 'บาสเกตบอล', url: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=500&auto=format&fit=crop&q=80' },
