@@ -124,6 +124,39 @@ export default function App() {
     }
   }, [currentUser]);
 
+  // Mobile same-tab login resume: after redirecting to LINE Login in the SAME
+  // tab (phones / LINE in-app browser), the OAuth callback page navigates back
+  // to `/?line_login=<base64url profile>`. Pick it up here, clean the URL,
+  // and continue the normal login flow (existing user → home, new → register).
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('line_login');
+      if (!encoded) return;
+      const json = decodeURIComponent(
+        Array.prototype.map
+          .call(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join(''),
+      );
+      const profile = JSON.parse(json) as RealLineProfile;
+      if (profile && profile.userId) {
+        try {
+          sessionStorage.removeItem('borrowhub_line_login');
+        } catch { /* ignore */ }
+        // Clean the profile out of the address bar (it contains a LINE user ID).
+        params.delete('line_login');
+        const clean = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`;
+        window.history.replaceState(null, '', clean);
+        handleLineLoginSuccess(profile);
+      }
+    } catch (err) {
+      console.warn('[LINE login] cannot resume from redirect:', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fire-and-forget real LINE push via the api/line-push serverless function.
   // If the Channel Access Token is not configured yet, the serverless function
   // returns 503 and we only log it (in-app notifications still work).

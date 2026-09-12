@@ -24,6 +24,12 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
   const [loginError, setLoginError] = useState<string | null>(null);
   const [copiedCallback, setCopiedCallback] = useState(false);
 
+  // Detect mobile / LINE in-app browser (LINE, FB, Instagram webviews have no popup support)
+  const isMobileDevice =
+    typeof navigator !== 'undefined' &&
+    (/Android|iPhone|iPad|iPod|Mobile|LINE/i.test(navigator.userAgent) ||
+      (typeof window !== 'undefined' && window.innerWidth < 768));
+
   // Determine the exact callback URL
   const callbackUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/auth/callback`
@@ -53,10 +59,25 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
     }
   };
 
-  // Open the real LINE Login OAuth window
+  // Open the real LINE Login OAuth window.
+  // - Desktop: popup window + postMessage (unchanged).
+  // - Mobile / LINE in-app browser: SAME-TAB redirect (window.location.href).
+  //   Popups are blocked or open a second browser instance there, which then
+  //   cannot postMessage back. A full redirect stays in the SAME browser/LINE
+  //   webview, and the callback renders "login success → auto return" HTML
+  //   that sends the user back to `/` in that same tab.
   const openLineLoginPopup = async (urlToOpen?: string) => {
     const targetUrl = urlToOpen || authUrl || (await fetchAuthUrl());
     if (!targetUrl) return;
+
+    // Mobile path: remember we are mid-login so App can resume after redirect.
+    if (isMobileDevice) {
+      try {
+        sessionStorage.setItem('borrowhub_line_login', 'pending');
+      } catch { /* ignore */ }
+      window.location.href = targetUrl;
+      return;
+    }
 
     setWaitingForPopup(true);
     setLoginError(null);
@@ -77,11 +98,13 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
     }
   };
 
-  // When modal opens, immediately prepare and launch popup
+  // When modal opens: on desktop prepare + auto-launch popup (unchanged);
+  // on mobile only prepare the URL — user taps the button once to redirect
+  // (auto-redirect on open would feel like a hijack on phones).
   useEffect(() => {
     if (isOpen) {
       fetchAuthUrl().then((url) => {
-        if (url) {
+        if (url && !isMobileDevice) {
           openLineLoginPopup(url);
         }
       });
@@ -89,6 +112,7 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
       setWaitingForPopup(false);
       setLoginError(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Listen for real postMessage from callback popup
@@ -201,10 +225,20 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
             >
               <Smartphone className="w-4 h-4" />
               <span>
-                {waitingForPopup ? 'เปิดหน้าต่าง LINE Login อีกครั้ง' : 'เข้าสู่ระบบด้วย LINE'}
+                {isMobileDevice
+                  ? 'เข้าสู่ระบบด้วย LINE (ไปต่อในหน้านี้)'
+                  : waitingForPopup
+                  ? 'เปิดหน้าต่าง LINE Login อีกครั้ง'
+                  : 'เข้าสู่ระบบด้วย LINE'}
               </span>
               <ExternalLink className="w-4 h-4" />
             </button>
+            {isMobileDevice && (
+              <p className="text-center text-[11px] text-slate-500 leading-relaxed">
+                บนมือถือ/ในแอป LINE จะพาไปหน้า LINE Login ในหน้านี้เลย
+                หลังยืนยันตัวตนจะกลับมาหน้า BORROW HUB เดิมอัตโนมัติ (ไม่เปิดเบราว์เซอร์ซ้อน)
+              </p>
+            )}
 
             <button
               type="button"

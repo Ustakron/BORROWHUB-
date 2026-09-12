@@ -148,12 +148,18 @@ const handleOAuthCallback = async (req: express.Request, res: express.Response) 
     };
 
     // Render HTML that sends the user profile to the parent window via postMessage and closes
+    // Mobile same-tab flow: also pass profile via URL so App can resume login
+    // when the callback loads as a FULL page (no window.opener — phones /
+    // LINE in-app browser where popups don't work). base64url keeps it URL-safe.
+    const payloadB64 = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
     res.send(`
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>LINE Login Success</title>
+          <meta http-equiv="refresh" content="3;url=/?line_login=${payloadB64}">
           <style>
             body { font-family: 'Prompt', -apple-system, sans-serif; text-align: center; padding: 40px 20px; background: #f8fafc; color: #0f2444; }
             .card { background: white; max-width: 440px; margin: 0 auto; padding: 32px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
@@ -161,6 +167,7 @@ const handleOAuthCallback = async (req: express.Request, res: express.Response) 
             .avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid #06C755; }
             h3 { margin: 8px 0; color: #1B365D; font-size: 18px; }
             p { font-size: 13px; color: #64748b; margin: 6px 0; }
+            .btn { display: inline-block; margin-top: 16px; background: #06C755; color: #fff; font-weight: bold; padding: 12px 28px; border-radius: 14px; text-decoration: none; }
           </style>
         </head>
         <body>
@@ -171,23 +178,28 @@ const handleOAuthCallback = async (req: express.Request, res: express.Response) 
             <p>ยินดีต้อนรับคุณ <strong>${payload.displayName}</strong></p>
             <p style="font-size: 11px; color: #94a3b8; font-family: monospace;">LINE ID: ${payload.userId}</p>
             <p style="color: #059669; font-weight: bold; margin-top: 15px;">กำลังนำคุณเข้าสู่ BORROW HUB...</p>
+            <a class="btn" href="/?line_login=${payloadB64}">แตะเพื่อกลับเข้า BORROW HUB</a>
           </div>
           <script>
-            try {
-              if (window.opener) {
-                window.opener.postMessage({
-                  type: 'LINE_LOGIN_SUCCESS',
-                  user: ${JSON.stringify(payload)}
-                }, '*');
-                setTimeout(() => {
-                  window.close();
-                }, 800);
-              } else {
-                window.location.href = '/';
+            (function () {
+              var payload = ${JSON.stringify(payload)};
+              try {
+                if (window.opener) {
+                  window.opener.postMessage({
+                    type: 'LINE_LOGIN_SUCCESS',
+                    user: payload
+                  }, '*');
+                  setTimeout(function () { window.close(); }, 800);
+                } else {
+                  // No opener = full-tab redirect (mobile / LINE webview):
+                  // go back to the app in THIS SAME tab.
+                  setTimeout(function () { window.location.replace('/?line_login=${payloadB64}'); }, 1200);
+                }
+              } catch (err) {
+                console.error(err);
+                window.location.replace('/?line_login=${payloadB64}');
               }
-            } catch (err) {
-              console.error(err);
-            }
+            })();
           </script>
         </body>
       </html>

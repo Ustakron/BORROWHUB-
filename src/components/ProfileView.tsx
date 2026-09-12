@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, BorrowRequest } from '../types';
 import { LINE_CHANNEL_CONFIG } from '../data/mockData';
-import { UserCheck, ShieldCheck, Mail, Phone, School, Award, Clock, CheckCircle2, AlertTriangle, Save, MessageCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import { UserCheck, ShieldCheck, Mail, Phone, School, Award, Clock, CheckCircle2, AlertTriangle, Save, MessageCircle, ExternalLink } from 'lucide-react';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -19,44 +19,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [isSaved, setIsSaved] = useState(false);
 
   // LINE OA friendship: 'checking' | 'friend' | 'not-friend' | 'error'
+  // NOTE: 'checking'/'error' states render NOTHING (no long technical error
+  // text) — the box only appears when friendship is verifiable.
   const [friendStatus, setFriendStatus] = useState<'checking' | 'friend' | 'not-friend' | 'error'>('checking');
-  const [friendError, setFriendError] = useState<string | null>(null);
 
   const checkFriendship = async () => {
     if (!currentUser.lineUserId) {
       setFriendStatus('error');
-      setFriendError('ไม่พบ LINE User ID ของผู้ใช้นี้');
       return;
     }
     try {
       setFriendStatus((prev) => (prev === 'not-friend' || prev === 'error' ? prev : 'checking'));
-      setFriendError(null);
       const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(currentUser.lineUserId)}`);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data || typeof data.isFriend !== 'boolean') {
-        // แยกสาเหตุให้ชัด — อย่าเหมารวมว่า token หายทุกครั้ง
-        const serverMsg: string | undefined =
-          data && typeof data.error === 'string' ? data.error : undefined;
-        if (res.status === 503) {
-          setFriendError(serverMsg || 'เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN');
-        } else if (res.status === 404) {
-          setFriendError(
-            'ไม่พบ API /api/line/friendship (404) — frontend อาจรันแยกกับ backend (เช่น vite :5173 เพียวๆ) หรือ deploy แบบ static ไม่มี server/function',
-          );
-        } else if (!data) {
-          setFriendError(`API ตอบกลับไม่ใช่ JSON (HTTP ${res.status}) — อาจโดน rewrite ไปหน้า index.html`);
-        } else {
-          setFriendError(serverMsg || `ตรวจสอบไม่สำเร็จ (HTTP ${res.status})`);
-        }
         console.warn('[ProfileView] friendship check failed:', res.status, data);
         setFriendStatus('error');
         return;
       }
-      setFriendError(null);
       setFriendStatus(data.isFriend ? 'friend' : 'not-friend');
     } catch (e: any) {
       console.warn('[ProfileView] friendship fetch exception:', e);
-      setFriendError(e?.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
       setFriendStatus('error');
     }
   };
@@ -124,14 +107,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </span>
             </div>
 
-            {/* LINE OA friend status — shows whether the user added the OA, with an Add button */}
+            {/* LINE OA friend status — shows only when verifiable.
+                Hidden while checking or when the API can't be reached,
+                so no long error text is shown. */}
+            {(friendStatus === 'friend' || friendStatus === 'not-friend') && (
             <div
               className={`mt-3 p-3 rounded-xl border inline-flex flex-wrap items-center gap-3 text-xs ${
                 friendStatus === 'friend'
                   ? 'bg-emerald-50/70 border-emerald-200/70 text-emerald-800'
-                  : friendStatus === 'not-friend'
-                  ? 'bg-[#06C755]/5 border-[#06C755]/40 text-slate-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
+                  : 'bg-[#06C755]/5 border-[#06C755]/40 text-slate-700'
               }`}
             >
               <span className="flex items-center gap-1.5 font-bold">
@@ -140,22 +124,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName} แล้ว ✅</span>
                   </>
-                ) : friendStatus === 'not-friend' ? (
+                ) : (
                   <>
                     <MessageCircle className="w-4 h-4 text-[#06C755]" />
                     <span>ยังไม่ได้เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}</span>
-                  </>
-                ) : friendStatus === 'checking' ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                    <span>กำลังตรวจสอบสถานะเพื่อน LINE OA...</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    <span>
-                      ตรวจสอบสถานะเพื่อนไม่ได้{friendError ? ` — ${friendError}` : ' (ยังไม่ตั้งค่า Token)'} — ยังรับแจ้งเตือนผ่านเว็บได้
-                    </span>
                   </>
                 )}
               </span>
@@ -171,6 +143,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </a>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>

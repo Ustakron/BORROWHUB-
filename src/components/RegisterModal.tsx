@@ -11,7 +11,8 @@ import {
   MessageCircle,
   CheckCircle2,
   ExternalLink,
-  AlertTriangle,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface RegisterModalProps {
@@ -34,27 +35,12 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
 
-  // LINE OA friendship status: 'checking' | 'friend' | 'not-friend' | 'error' | null
-  const [friendStatus, setFriendStatus] = useState<'checking' | 'friend' | 'not-friend' | 'error' | null>(null);
-
-  // Check on the server whether this LINE user has added the LINE OA as a friend.
-  const checkFriendshipStatus = async () => {
-    if (!lineProfile?.userId) {
-      setFriendStatus(null);
-      return;
-    }
-    try {
-      setFriendStatus((prev) => prev || 'checking');
-      const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(lineProfile.userId)}`);
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data) {
-        setFriendStatus('error'); // token not configured / LINE error -> allow registration
-        return;
-      }
-      setFriendStatus(data.isFriend ? 'friend' : 'not-friend');
-    } catch {
-      setFriendStatus('error');
-    }
+  // LINE OA ID for manual add (shown so the user can add before using the app)
+  const [copiedOaId, setCopiedOaId] = useState(false);
+  const handleCopyOaId = () => {
+    navigator.clipboard.writeText('@756bxjku').catch(() => {});
+    setCopiedOaId(true);
+    setTimeout(() => setCopiedOaId(false), 2000);
   };
 
   useEffect(() => {
@@ -63,26 +49,11 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
     }
   }, [lineProfile]);
 
-  // Auto-poll friendship status every 3s while the modal is open,
-  // so the registration can be completed right after the user taps "Add" in LINE.
-  useEffect(() => {
-    if (isOpen && lineProfile?.userId) {
-      checkFriendshipStatus();
-      const timer = setInterval(checkFriendshipStatus, 3000);
-      return () => clearInterval(timer);
-    }
-    setFriendStatus(null);
-  }, [isOpen, lineProfile?.userId]);
-
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) return;
-
-    // Require the user to have added the LINE OA as a friend before registering
-    // (only enforced when the server can verify friendship status).
-    if (friendStatus !== 'friend' && friendStatus !== 'error') return;
 
     const newUser: User = {
       id: `user-${Date.now()}`,
@@ -283,60 +254,40 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
               </span>
             </div>
 
-            {/* LINE OA Add-friend step — required so user can receive real LINE notifications */}
-            <div
-              className={`rounded-2xl border p-3.5 transition-colors ${
-                friendStatus === 'friend'
-                  ? 'bg-emerald-50 border-emerald-300'
-                  : 'bg-[#06C755]/5 border-[#06C755]/40'
-              }`}
-            >
+            {/* LINE OA Add-friend step — ask the user to add @756bxjku before using the app */}
+            <div className="rounded-2xl border p-3.5 bg-[#06C755]/5 border-[#06C755]/40">
               <div className="flex items-start gap-2.5">
-                <div
-                  className={`p-1.5 rounded-lg shrink-0 text-white ${
-                    friendStatus === 'friend' ? 'bg-emerald-600' : 'bg-[#06C755]'
-                  }`}
-                >
-                  {friendStatus === 'friend' ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : (
-                    <MessageCircle className="w-4 h-4" />
-                  )}
+                <div className="p-1.5 rounded-lg shrink-0 text-white bg-[#06C755]">
+                  <MessageCircle className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-800">
-                    {friendStatus === 'friend'
-                      ? `แอดเพื่อน ${LINE_CHANNEL_CONFIG.oaName} เรียบร้อยแล้ว ✅`
-                      : `เพิ่มเพื่อน LINE OA (${LINE_CHANNEL_CONFIG.oaName}) เพื่อรับการแจ้งเตือน`}
+                    ก่อนใช้งาน — แอดไลน์ OA <span className="font-mono">@756bxjku</span> ก่อนนะครับ
                   </p>
                   <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                    {friendStatus === 'friend'
-                      ? 'ระบบจะส่งข้อความแจ้งเตือนสถานะ ยืม / คืน / อนุมัติ เข้า LINE ของคุณอัตโนมัติ'
-                      : friendStatus === 'error'
-                      ? 'ไม่สามารถตรวจสอบสถานะเพื่อนได้ (ยังไม่ได้ตั้งค่าบัญชี LINE OA) — ยังสามารถสมัครต่อได้'
-                      : 'กดปุ่มด้านล่างเพื่อเปิด LINE แล้วแตะปุ่มเพิ่มเพื่อน ระบบจะตรวจสอบให้อัตโนมัติทุก 3 วินาที'}
+                    เปิดแอป LINE → ค้นหาเพื่อนด้วย ID <span className="font-mono font-bold">@756bxjku</span> แล้วกดเพิ่มเพื่อน
+                    เพื่อรับแจ้งเตือนยืม / คืน / อนุมัติ
                   </p>
 
-                  {friendStatus === 'not-friend' && (
-                    <div className="mt-2.5 flex flex-col gap-1.5">
-                      <a
-                        href={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        เปิด LINE แล้วเพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => checkFriendshipStatus()}
-                        className="text-[11px] font-semibold text-[#06C755] hover:underline text-left"
-                      >
-                        ↻ ตรวจสอบสถานะอีกครั้ง
-                      </button>
-                    </div>
-                  )}
+                  <div className="mt-2.5 flex flex-col gap-1.5">
+                    <a
+                      href={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      เปิด LINE แล้วเพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleCopyOaId}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                    >
+                      {copiedOaId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedOaId ? 'คัดลอกแล้ว!' : 'คัดลอก LINE ID: @756bxjku'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -345,18 +296,11 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
           <div className="mt-6">
             <button
               type="submit"
-              disabled={friendStatus !== 'friend' && friendStatus !== 'error'}
-              className="w-full py-3.5 px-4 bg-[#1B365D] hover:bg-[#0F2444] text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#1B365D] disabled:active:scale-100"
+              className="w-full py-3.5 px-4 bg-[#1B365D] hover:bg-[#0F2444] text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
             >
               <Sparkles className="w-4 h-4 text-[#F26522]" />
               <span>บันทึกและเริ่มใช้งาน BORROW HUB</span>
             </button>
-            {friendStatus === 'not-friend' && (
-              <p className="mt-2 text-center text-[11px] text-rose-600 font-semibold flex items-center justify-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                กรุณาแอดเพื่อน LINE OA ก่อน เพื่อให้ระบบแจ้งเตือนยืม-คืนถึง LINE ของคุณได้
-              </p>
-            )}
           </div>
         </form>
       </div>
