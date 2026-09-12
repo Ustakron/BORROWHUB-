@@ -16,14 +16,27 @@ const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2011554399';
 
 /** Determine the public base URL of the current deployment. */
 function getBaseUrl(req: VercelRequest): string {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const host = forwardedHost
+    ? (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost)
+    : typeof req.headers['host'] === 'string'
+    ? req.headers['host']
+    : '';
+
+  // Prefer the URL of the ACTUAL request: it must match the browser URL the
+  // user logged in from (and the Callback URL registered in the console).
+  if (proto && host) {
+    return `${proto}://${host}`;
+  }
+  // APP_URL is only a fallback for environments that hide the request host
+  // (e.g. Cloud Run). Setting it to a different domain than the one in use
+  // causes "redirect_uri does not match" — so do NOT override it on Vercel.
   if (process.env.APP_URL) {
     return process.env.APP_URL.replace(/\/$/, '');
   }
-  const forwardedProto = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto || 'https';
-  const forwardedHost = req.headers['x-forwarded-host'];
-  const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost || req.headers['host'] || 'localhost:3000';
-  return `${proto}://${host}`;
+  return `https://${host || 'localhost:3000'}`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

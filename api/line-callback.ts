@@ -18,14 +18,25 @@ const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '90bc8c4402720349
 
 /** Determine the public base URL of the current deployment. */
 function getBaseUrl(req: VercelRequest): string {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const host = forwardedHost
+    ? (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost)
+    : typeof req.headers['host'] === 'string'
+    ? req.headers['host']
+    : '';
+
+  // The redirect_uri used at the TOKEN endpoint must EXACTLY match the one
+  // used at the AUTHORIZE step (the browser's current URL). Derive it from
+  // the actual request; only fall back to APP_URL when the host is hidden.
+  if (proto && host) {
+    return `${proto}://${host}`;
+  }
   if (process.env.APP_URL) {
     return process.env.APP_URL.replace(/\/$/, '');
   }
-  const forwardedProto = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto || 'https';
-  const forwardedHost = req.headers['x-forwarded-host'];
-  const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost || req.headers['host'] || 'localhost:3000';
-  return `${proto}://${host}`;
+  return `https://${host || 'localhost:3000'}`;
 }
 
 function asString(value: unknown): string | undefined {

@@ -23,16 +23,21 @@ const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 
 // Helper to determine redirect URI
 function getRedirectUri(req: express.Request): string {
-  // If APP_URL is defined from AI Studio runtime environment, use it
-  if (process.env.APP_URL) {
-    const cleanAppUrl = process.env.APP_URL.replace(/\/$/, '');
-    return `${cleanAppUrl}/auth/callback`;
+  // Prefer the URL of the ACTUAL request so it always matches the browser URL
+  // the user logged in from (and the Callback URL registered in the console).
+  const forwardedHost = req.get('x-forwarded-host') || req.get('host') || '';
+  const host = forwardedHost.split(',')[0].trim();
+  const protocol = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+  if (host) {
+    return `${protocol}://${host}/auth/callback`;
   }
-  
-  // Fallback to request host
-  const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:3000';
-  const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
-  return `${protocol}://${host}/auth/callback`;
+  // APP_URL is only a fallback for environments that hide the request host
+  // (e.g. Cloud Run). Do NOT set it to a different domain than the one in use
+  // on Vercel — it would cause "redirect_uri does not match".
+  if (process.env.APP_URL) {
+    return `${process.env.APP_URL.replace(/\/$/, '')}/auth/callback`;
+  }
+  return 'https://localhost:3000/auth/callback';
 }
 
 // 1. API to generate LINE Login OAuth Authorization URL
