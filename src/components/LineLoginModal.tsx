@@ -36,7 +36,10 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
     try {
       const response = await fetch(`/api/auth/line/url?redirect_uri=${encodeURIComponent(callbackUrl)}`);
       if (!response.ok) {
-        throw new Error('ไม่สามารถสร้าง URL สำหรับ LINE Login ได้');
+        // If this happens on Vercel it usually means the api/ serverless
+        // functions were not deployed (e.g. vercel.json build outputs).
+        console.error('LINE URL endpoint failed with status:', response.status);
+        throw new Error(`ไม่สามารถสร้าง URL สำหรับ LINE Login ได้ (HTTP ${response.status})`);
       }
       const data = await response.json();
       setAuthUrl(data.url);
