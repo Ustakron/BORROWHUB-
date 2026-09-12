@@ -20,22 +20,43 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // LINE OA friendship: 'checking' | 'friend' | 'not-friend' | 'error'
   const [friendStatus, setFriendStatus] = useState<'checking' | 'friend' | 'not-friend' | 'error'>('checking');
+  const [friendError, setFriendError] = useState<string | null>(null);
 
   const checkFriendship = async () => {
     if (!currentUser.lineUserId) {
       setFriendStatus('error');
+      setFriendError('ไม่พบ LINE User ID ของผู้ใช้นี้');
       return;
     }
     try {
       setFriendStatus((prev) => (prev === 'not-friend' || prev === 'error' ? prev : 'checking'));
+      setFriendError(null);
       const res = await fetch(`/api/line/friendship?userId=${encodeURIComponent(currentUser.lineUserId)}`);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data || typeof data.isFriend !== 'boolean') {
+        // แยกสาเหตุให้ชัด — อย่าเหมารวมว่า token หายทุกครั้ง
+        const serverMsg: string | undefined =
+          data && typeof data.error === 'string' ? data.error : undefined;
+        if (res.status === 503) {
+          setFriendError(serverMsg || 'เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN');
+        } else if (res.status === 404) {
+          setFriendError(
+            'ไม่พบ API /api/line/friendship (404) — frontend อาจรันแยกกับ backend (เช่น vite :5173 เพียวๆ) หรือ deploy แบบ static ไม่มี server/function',
+          );
+        } else if (!data) {
+          setFriendError(`API ตอบกลับไม่ใช่ JSON (HTTP ${res.status}) — อาจโดน rewrite ไปหน้า index.html`);
+        } else {
+          setFriendError(serverMsg || `ตรวจสอบไม่สำเร็จ (HTTP ${res.status})`);
+        }
+        console.warn('[ProfileView] friendship check failed:', res.status, data);
         setFriendStatus('error');
         return;
       }
+      setFriendError(null);
       setFriendStatus(data.isFriend ? 'friend' : 'not-friend');
-    } catch {
+    } catch (e: any) {
+      console.warn('[ProfileView] friendship fetch exception:', e);
+      setFriendError(e?.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
       setFriendStatus('error');
     }
   };
@@ -132,38 +153,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 ) : (
                   <>
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    <span>ตรวจสอบสถานะเพื่อนไม่ได้ (ยังไม่ตั้งค่า Token) — ยังรับแจ้งเตือนผ่านเว็บได้</span>
+                    <span>
+                      ตรวจสอบสถานะเพื่อนไม่ได้{friendError ? ` — ${friendError}` : ' (ยังไม่ตั้งค่า Token)'} — ยังรับแจ้งเตือนผ่านเว็บได้
+                    </span>
                   </>
                 )}
               </span>
               {friendStatus === 'not-friend' && (
-                <span className="flex items-center gap-2">
-                  <a
-                    href={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}
-                  </a>
-                  <button
-                    type="button"
-                    onClick={checkFriendship}
-                    className="text-[11px] font-semibold text-[#06C755] hover:underline"
-                  >
-                    ↻ ตรวจสอบอีกครั้ง
-                  </button>
-                </span>
-              )}
-              {friendStatus === 'error' && (
-                <button
-                  type="button"
-                  onClick={checkFriendship}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:underline"
+                <a
+                  href={LINE_CHANNEL_CONFIG.oaAddFriendUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-xl transition-all"
                 >
-                  <RefreshCw className="w-3 h-3" /> ลองตรวจสอบอีกครั้ง
-                </button>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  เพิ่มเพื่อน {LINE_CHANNEL_CONFIG.oaName}
+                </a>
               )}
             </div>
           </div>
