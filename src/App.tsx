@@ -374,6 +374,34 @@ export default function App() {
       relatedRequestId: newId,
     };
     triggerLinePush(pushMsg);
+
+    // LINE push + in-app notification to the OWNER(s) of the item
+    // (school items without an owner notify the admin(s) instead)
+    const ownerUsers: User[] = [];
+    if (ownerId) {
+      const ownerFound = users.find((u) => u.id === ownerId);
+      if (ownerFound) ownerUsers.push(ownerFound);
+    } else {
+      ownerUsers.push(...users.filter((u) => u.role === 'admin'));
+    }
+    ownerUsers
+      .filter((u) => u.id !== currentUser.id)
+      .forEach((owner) => {
+        const ownerNotif: LineNotification = {
+          id: `notif-${Date.now()}-${owner.id}`,
+          title: `New borrow request for your item: ${requestData.itemName}`,
+          message: `${requestData.borrowerName} (${requestData.borrowerGrade}/${requestData.borrowerRoom}) wants to borrow "${requestData.itemName}" on ${requestData.borrowDate} (${requestData.borrowPeriod}). Open BORROW HUB to approve or reject.`,
+          type: 'borrow_request',
+          timestamp: pushMsg.timestamp,
+          read: false,
+          recipientLineId: owner.lineUserId,
+          recipientUserId: owner.id,
+          relatedRequestId: newId,
+        };
+        saveNotification(ownerNotif); // Firestore: users/{owner.id}/notifications
+        sendLinePush(owner.lineUserId, ownerNotif.title, ownerNotif.message);
+      });
+
     setCurrentTab('requests');
   };
 
