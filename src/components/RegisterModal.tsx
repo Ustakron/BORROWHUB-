@@ -73,8 +73,8 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-4 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-y-auto modal-scroll animate-in fade-in duration-200">
+      <div className="w-full max-w-md my-auto max-h-[92dvh] overflow-y-auto modal-scroll rounded-3xl bg-white shadow-2xl border border-slate-100">
         {/* Header with Logo */}
         <div className="p-5 bg-gradient-to-b from-[#1B365D]/5 to-transparent border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -93,7 +93,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
         </div>
 
         {/* Step 5 Form content */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-6 pb-[max(1.75rem,env(safe-area-inset-bottom))]">
           <div className="text-center mb-6">
             <div className="relative inline-block mb-3">
               {lineProfile?.pictureUrl ? (

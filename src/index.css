@@ -29,10 +29,34 @@
 }
 
 /* Base style resets */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: 'Prompt', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background-color: #f8fafc;
   color: #0f2444;
+  /* กันคอนเทนต์โดนแถบ home indicator / toolbar ของ iPhone บัง */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Safe-area helpers สำหรับ iPhone (notch / home bar / Safari toolbar) */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* Modal บนมือถือ: ให้การ์ดเลื่อนดูได้ ไม่โดนแถบล่างบัง */
+.modal-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }

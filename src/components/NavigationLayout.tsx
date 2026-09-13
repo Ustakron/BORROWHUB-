@@ -216,7 +216,7 @@ export const NavigationLayout: React.FC<NavigationLayoutProps> = ({
         )}
 
         {/* Main Content View */}
-        <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:p-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
       </div>

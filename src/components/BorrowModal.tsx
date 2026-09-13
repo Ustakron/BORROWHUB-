@@ -66,8 +66,8 @@ export const BorrowModal: React.FC<BorrowModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-lg my-8 overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-4 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-y-auto modal-scroll animate-in fade-in duration-200">
+      <div className="w-full max-w-lg my-auto max-h-[92dvh] overflow-y-auto modal-scroll rounded-2xl bg-white shadow-2xl border border-slate-100">
         {/* Header */}
         <div className="bg-[#1B365D] px-6 py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -142,8 +142,8 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-xs p-4 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-y-auto modal-scroll animate-in fade-in duration-200">
+      <div className="w-full max-w-md my-auto max-h-[92dvh] overflow-y-auto modal-scroll rounded-3xl bg-white shadow-2xl border border-slate-100">
         {/* LINE Green Header */}
         <div className="bg-[#06C755] px-6 py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -164,7 +164,7 @@ export const LineLoginModal: React.FC<LineLoginModalProps> = ({ isOpen, onClose,
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {/* Logo & School context */}
           <div className="flex flex-col items-center text-center mb-5">
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-xs mb-2">

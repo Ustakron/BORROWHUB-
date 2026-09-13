@@ -64,8 +64,8 @@ export const LineFriendGate: React.FC<LineFriendGateProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F2444]/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-100">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[#0F2444]/85 backdrop-blur-md p-4 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-y-auto modal-scroll animate-in fade-in duration-200">
+      <div className="w-full max-w-md my-auto max-h-[92dvh] overflow-y-auto modal-scroll rounded-3xl bg-white shadow-2xl border border-slate-100">
         {/* Header */}
         <div className="p-5 bg-gradient-to-b from-[#1B365D]/5 to-transparent border-b border-slate-100 flex items-center gap-3">
           <BorrowHubLogo size="sm" variant="icon" />

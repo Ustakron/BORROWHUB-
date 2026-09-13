@@ -13,7 +13,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
   isLoading = false,
 }) => {
   return (
-    <div className="min-h-[92vh] flex flex-col items-center justify-between py-8 px-4 relative overflow-hidden">
+    <div className="min-h-[92vh] min-h-[92dvh] flex flex-col items-center justify-between py-8 px-4 pb-safe relative overflow-hidden">
       {/* Background shapes using logo colors (#1B365D Navy and #F26522 Orange) */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#1B365D]/5 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute top-1/3 -right-32 w-96 h-96 bg-[#F26522]/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -92,9 +92,10 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
         </div>
       </div>
 
-      {/* Footer info */}
-      <div className="text-center text-[11px] text-slate-400 py-3">
+      {/* Footer info — เว้นเผื่อแถบล่าง iPhone (Safari toolbar / home bar) */}
+      <div className="text-center text-[11px] text-slate-400 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         © 2026 BORROW HUB • {LINE_CHANNEL_CONFIG.schoolName}
+        <div className="h-[env(safe-area-inset-bottom)]" />
       </div>
     </div>
   );
