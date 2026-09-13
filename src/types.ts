@@ -28,6 +28,8 @@ export interface Item {
   ownerName?: string;
   // ของที่เจ้าของเพิ่มจะต้องได้รับการอนุมัติจากเจ้าของก่อนจึงแสดงในแคตตาล็อก
   ownerApproved?: boolean;
+  // timestamp (ms) สำหรับเรียงลำดับ/ซิงก์ Firestore
+  updatedAtMs?: number;
 }
 
 export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'borrowed' | 'returned' | 'overdue';
@@ -58,6 +60,13 @@ export interface BorrowRequest {
   returnedAt?: string;
   approverName?: string;
   rejectionReason?: string;
+  // timestamp (ms) สำหรับเรียงลำดับ/ซิงก์ Firestore
+  createdAtMs?: number;
+  updatedAtMs?: number;
+  // item owner id - the ONLY user who may approve/reject requests on this item
+  ownerId?: string;
+  // users that keep a per-user copy of this request (borrower + owner + admins)
+  readerUids?: string[];
 }
 
 export interface User {
@@ -71,6 +80,8 @@ export interface User {
   avatar: string;
   email?: string;
   phone?: string;
+  // timestamp (ms) สำหรับซิงก์ Firestore
+  updatedAtMs?: number;
 }
 
 export interface LineNotification {
@@ -82,4 +93,8 @@ export interface LineNotification {
   read: boolean;
   recipientLineId: string;
   relatedRequestId?: string;
+  // recipient user id (users/{userId}) - per-user Firestore notifications storage
+  recipientUserId?: string;
+  // timestamp (ms) สำหรับเรียงลำดับ/ซิงก์ Firestore
+  updatedAtMs?: number;
 }

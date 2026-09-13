@@ -183,6 +183,7 @@ export const INITIAL_REQUESTS: BorrowRequest[] = [
     borrowerGrade: 'ม.6',
     borrowerRoom: '1',
     borrowerLineId: 'U33a06f9b4e2e0bac95284f0f235591f3',
+    readerUids: ['user-somchai', 'user-teacher'],
     borrowDate: '15/05/2568',
     borrowPeriod: 'คาบ 4',
     returnDate: '15/05/2568',
@@ -206,6 +207,7 @@ export const INITIAL_REQUESTS: BorrowRequest[] = [
     borrowerGrade: 'ม.6',
     borrowerRoom: '1',
     borrowerLineId: 'U33a06f9b4e2e0bac95284f0f235591f3',
+    readerUids: ['user-somchai', 'user-teacher'],
     borrowDate: '15/05/2568',
     borrowPeriod: 'คาบ 1',
     returnDate: '15/05/2568',
@@ -229,6 +231,7 @@ export const INITIAL_REQUESTS: BorrowRequest[] = [
     borrowerGrade: 'ม.6',
     borrowerRoom: '1',
     borrowerLineId: 'U33a06f9b4e2e0bac95284f0f235591f3',
+    readerUids: ['user-somchai', 'user-teacher'],
     borrowDate: '15/05/2568',
     borrowPeriod: 'คาบ 3',
     returnDate: '15/05/2568',
@@ -250,6 +253,7 @@ export const INITIAL_NOTIFICATIONS: LineNotification[] = [
     timestamp: '15/05/2568 08:45 น.',
     read: true,
     recipientLineId: 'U33a06f9b4e2e0bac95284f0f235591f3',
+    recipientUserId: 'user-somchai',
     relatedRequestId: 'req-101',
   },
   {
@@ -260,6 +264,7 @@ export const INITIAL_NOTIFICATIONS: LineNotification[] = [
     timestamp: '15/05/2568 09:10 น.',
     read: false,
     recipientLineId: 'U33a06f9b4e2e0bac95284f0f235591f3',
+    recipientUserId: 'user-somchai',
     relatedRequestId: 'req-103',
   },
   {
@@ -270,6 +275,7 @@ export const INITIAL_NOTIFICATIONS: LineNotification[] = [
     timestamp: '15/05/2568 10:15 น.',
     read: false,
     recipientLineId: 'U33a06f9b4e2e0bac95284f0f235591f3',
+    recipientUserId: 'user-somchai',
     relatedRequestId: 'req-102',
   },
 ];

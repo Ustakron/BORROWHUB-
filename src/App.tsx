@@ -15,6 +15,18 @@ import {
   FOOTBALL_IMAGE_URL,
 } from './data/mockData';
 import { NavigationLayout } from './components/NavigationLayout';
+import {
+  subscribeAll,
+  saveUser,
+  saveItem,
+  deleteItem,
+  saveRequest,
+  updateRequest,
+  deleteRequest,
+  saveNotification,
+  markNotificationRead,
+  clearNotifications,
+} from './lib/db';
 import { LandingHero } from './components/LandingHero';
 import { DashboardOverview } from './components/DashboardOverview';
 import { ItemCatalog } from './components/ItemCatalog';
@@ -62,6 +74,10 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
   });
 
+  // Map LINE user id to the app user id (users/{userId}) - per-user Firestore paths
+  const userIdByLine = (lineId: string): string | undefined =>
+    users.find((u) => u.lineUserId === lineId)?.id;
+
   // UI Flow & Navigation states
   const [currentTab, setCurrentTab] = useState<'home' | 'catalog' | 'requests' | 'notifications' | 'profile'>('home');
   const [showLineLoginModal, setShowLineLoginModal] = useState(false);
@@ -92,6 +108,23 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('borrowhub_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Firestore realtime sync — ข้อมูลแยก collection: users / items / borrow_requests / notifications
+  // (ข้อมูลผู้ใช้อยู่ collection "users" ส่วนข้อมูลยืม-คืนอยู่ collection "borrow_requests")
+  const [firestoreStatus, setFirestoreStatus] = useState<'connecting' | 'online' | 'offline'>('connecting');
+  useEffect(() => {
+    if (!currentUser) return;
+    return subscribeAll(
+      {
+        onUsers: (rows) => setUsers(rows),
+        onItems: (rows) => setItems(rows),
+        onRequests: (rows) => setRequests(rows),
+        onNotifications: (rows) => setNotifications(rows),
+      },
+      (status) => setFirestoreStatus(status),
+      { userId: currentUser.id, isAdmin: currentUser.role === 'admin' },
+    );
+  }, [currentUser?.id, currentUser?.role]);
 
   // Poll LINE OA friendship status when viewing Notifications tab
   useEffect(() => {
@@ -184,6 +217,7 @@ export default function App() {
   // In-app local notification only (no real LINE push)
   const notifyLocally = (notif: LineNotification) => {
     setNotifications((prev) => [notif, ...prev]);
+    saveNotification(notif); // Firestore: notifications
     setActivePushToast(notif);
   };
 
@@ -212,6 +246,7 @@ export default function App() {
           timestamp: 'เมื่อสักครู่',
           read: false,
           recipientLineId: userId,
+          recipientUserId: userIdByLine(userId),
         };
         setFriendGateUserId(userId);
         setShowFriendGate(true);
@@ -237,6 +272,7 @@ export default function App() {
       };
 
       setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+      saveUser(updatedUser);
       setCurrentUser(updatedUser);
       setCurrentTab('home');
 
@@ -251,6 +287,7 @@ export default function App() {
         timestamp: 'เมื่อสักครู่',
         read: false,
         recipientLineId: profile.userId,
+        recipientUserId: updatedUser.id,
       };
       triggerLinePush(welcomeNotif);
     } else {
@@ -265,6 +302,7 @@ export default function App() {
     setShowRegisterModal(false);
     setPendingLineProfile(null);
     setUsers((prev) => [...prev, newUser]);
+    saveUser(newUser);
     setCurrentUser(newUser);
     setCurrentTab('home');
 
@@ -278,6 +316,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: newUser.lineUserId,
+      recipientUserId: newUser.id,
     };
     triggerLinePush(welcomeNotif);
   };
@@ -298,14 +337,28 @@ export default function App() {
     if (!currentUser) return;
 
     const newId = `req-${Date.now().toString().slice(-4)}`;
+    // Users that keep a per-user copy under users/{id}/borrow_requests:
+    const ownerItem = items.find((i) => i.id === requestData.itemId);
+    const ownerId = ownerItem?.ownerId;
+    const readerUids: string[] = [];
+    const addReader = (uid?: string) => {
+      if (uid && !readerUids.includes(uid)) readerUids.push(uid);
+    };
+    addReader(currentUser.id);
+    addReader(ownerId);
+    users.filter((u) => u.role === 'admin').forEach((u) => addReader(u.id));
     const newReq: BorrowRequest = {
       ...requestData,
       id: newId,
       status: 'pending',
       createdAt: 'วันนี้ (เมื่อสักครู่)',
+      createdAtMs: Date.now(),
+      ownerId,
+      readerUids,
     };
 
     setRequests((prev) => [newReq, ...prev]);
+    saveRequest(newReq); // บันทึกคำขอยืมลง Firestore (collection: borrow_requests)
     setShowBorrowModal(false);
 
     // Step 9: แจ้งเตือนผู้ให้ยืมและผู้ยืมผ่าน LINE ทันที
@@ -317,10 +370,20 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: currentUser.lineUserId,
+      recipientUserId: currentUser.id,
       relatedRequestId: newId,
     };
     triggerLinePush(pushMsg);
     setCurrentTab('requests');
+  };
+
+  // มีแค่คนที่ลงของสิ่งนั้น (เจ้าของของ ที่ item.ownerId ตรงกับ user id) เท่านั้นที่อนุมัติ/ปฏิเสธ
+  // คำขอยืมของของตนเองได้ — admin (ครูผู้ดูแลระบบ) ยังดูแลของกลางของโรงเรียนได้ทุกราย
+  const isRequestManager = (req: BorrowRequest): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    const item = items.find((i) => i.id === req.itemId);
+    return Boolean(item && item.ownerId && item.ownerId === currentUser.id);
   };
 
   // STEP 9: Approval Flow
@@ -328,6 +391,11 @@ export default function App() {
     if (!currentUser) return;
     const target = requests.find((r) => r.id === requestId);
     if (!target) return;
+    // มีแค่เจ้าของของ (ผู้ที่ลงของนี้) เท่านั้นอนุมัติคำขอยืมของของตนเองได้
+    if (!isRequestManager(target)) {
+      window.alert('เฉพาะเจ้าของของ (ผู้ที่ลงของนี้) เท่านั้นสามารถอนุมัติคำขอยืมนี้');
+      return;
+    }
 
     // Update request status to 'borrowed'
     setRequests((prev) =>
@@ -342,22 +410,28 @@ export default function App() {
           : r
       )
     );
+    updateRequest(target, {
+      status: 'borrowed',
+      approvedAt: 'เมื่อสักครู่',
+      approverName: currentUser.name,
+    }); // Firestore: borrow_requests
 
     // Update item status to 'borrowed'
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === target.itemId
-          ? {
-              ...i,
-              status: 'borrowed',
-              currentBorrowerName: target.borrowerName,
-              currentBorrowerRoom: `${target.borrowerGrade}/${target.borrowerRoom}`,
-              currentBorrowPeriod: target.borrowPeriod,
-              currentDueDate: target.returnDate,
-            }
-          : i
-      )
-    );
+    const targetItem = items.find((i) => i.id === target.itemId);
+    const updatedItem: Item | undefined = targetItem
+      ? {
+          ...targetItem,
+          status: 'borrowed',
+          currentBorrowerName: target.borrowerName,
+          currentBorrowerRoom: `${target.borrowerGrade}/${target.borrowerRoom}`,
+          currentBorrowPeriod: target.borrowPeriod,
+          currentDueDate: target.returnDate,
+        }
+      : undefined;
+    if (updatedItem) {
+      setItems((prev) => prev.map((i) => (i.id === updatedItem.id ? updatedItem : i)));
+      saveItem(updatedItem); // Firestore: items
+    }
 
     // Send LINE Push Notification to borrower (Step 9 in Image 1)
     const approveNotif: LineNotification = {
@@ -368,14 +442,21 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: target.borrowerLineId,
+      recipientUserId: target.borrowerId,
       relatedRequestId: requestId,
     };
     triggerLinePush(approveNotif);
   };
 
   const handleRejectRequest = (requestId: string, reason?: string) => {
+    if (!currentUser) return;
     const target = requests.find((r) => r.id === requestId);
     if (!target) return;
+    // มีแค่เจ้าของของ (ผู้ที่ลงของนี้) เท่านั้นปฏิเสธคำขอยืมของของตนเองได้
+    if (!isRequestManager(target)) {
+      window.alert('เฉพาะเจ้าของของ (ผู้ที่ลงของนี้) เท่านั้นสามารถปฏิเสธคำขอยืมนี้');
+      return;
+    }
 
     setRequests((prev) =>
       prev.map((r) =>
@@ -388,6 +469,10 @@ export default function App() {
           : r
       )
     );
+    updateRequest(target, {
+      status: 'rejected',
+      rejectionReason: reason || 'อุปกรณ์ไม่พร้อมใช้งานหรือติดภารกิจส่วนกลาง',
+    }); // Firestore: borrow_requests
 
     const rejectNotif: LineNotification = {
       id: `notif-${Date.now()}`,
@@ -397,6 +482,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: target.borrowerLineId,
+      recipientUserId: target.borrowerId,
       relatedRequestId: requestId,
     };
     triggerLinePush(rejectNotif);
@@ -419,22 +505,24 @@ export default function App() {
           : r
       )
     );
+    updateRequest(target, { status: 'returned', returnedAt: 'เมื่อสักครู่' }); // Firestore: borrow_requests
 
     // Reset item status back to 'available'
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === target.itemId
-          ? {
-              ...i,
-              status: 'available',
-              currentBorrowerName: undefined,
-              currentBorrowerRoom: undefined,
-              currentBorrowPeriod: undefined,
-              currentDueDate: undefined,
-            }
-          : i
-      )
-    );
+    const targetItem = items.find((i) => i.id === target.itemId);
+    const returnedItem: Item | undefined = targetItem
+      ? {
+          ...targetItem,
+          status: 'available',
+          currentBorrowerName: undefined,
+          currentBorrowerRoom: undefined,
+          currentBorrowPeriod: undefined,
+          currentDueDate: undefined,
+        }
+      : undefined;
+    if (returnedItem) {
+      setItems((prev) => prev.map((i) => (i.id === returnedItem.id ? returnedItem : i)));
+      saveItem(returnedItem); // Firestore: items
+    }
 
     const returnNotif: LineNotification = {
       id: `notif-${Date.now()}`,
@@ -444,6 +532,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: target.borrowerLineId,
+      recipientUserId: target.borrowerId,
       relatedRequestId: requestId,
     };
     triggerLinePush(returnNotif);
@@ -457,6 +546,7 @@ export default function App() {
     setRequests((prev) =>
       prev.map((r) => (r.id === requestId ? { ...r, status: 'overdue' } : r))
     );
+    updateRequest(target, { status: 'overdue' }); // Firestore: borrow_requests
 
     const overdueNotif: LineNotification = {
       id: `notif-${Date.now()}`,
@@ -466,6 +556,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: target.borrowerLineId,
+      recipientUserId: target.borrowerId,
       relatedRequestId: requestId,
     };
     triggerLinePush(overdueNotif);
@@ -484,6 +575,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: target.borrowerLineId,
+      recipientUserId: target.borrowerId,
       relatedRequestId: requestId,
     };
     triggerLinePush(reminderNotif);
@@ -507,6 +599,17 @@ export default function App() {
     } else {
       setItems((prev) => [savedItem, ...prev]);
     }
+    saveItem(savedItem); // Firestore: items
+    // อัปเดตคำขอยืมที่ยัง pending ของของนี้ใน Firestore ด้วย
+    requests
+      .filter((r) => r.itemId === savedItem.id && r.status === 'pending')
+      .forEach((r) =>
+        updateRequest(r, {
+          itemName: savedItem.name,
+          itemImage: savedItem.image,
+          itemCategory: savedItem.categoryLabel,
+        }),
+      );
 
     const notif: LineNotification = {
       id: `notif-${Date.now()}`,
@@ -518,6 +621,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: currentUser.lineUserId,
+      recipientUserId: currentUser.id,
     };
     triggerLinePush(notif);
   };
@@ -542,6 +646,10 @@ export default function App() {
     setItems((prev) => prev.filter((i) => i.id !== target.id));
     // ลบคำขอยืมที่ยังรออนุมัติของของนี้ด้วย
     setRequests((prev) => prev.filter((r) => !(r.itemId === target.id && r.status === 'pending')));
+    deleteItem(target); // Firestore: items
+    requests
+      .filter((r) => r.itemId === target.id && r.status === 'pending')
+      .forEach((r) => deleteRequest(r)); // Firestore: borrow_requests
 
     const notif: LineNotification = {
       id: `notif-${Date.now()}`,
@@ -551,6 +659,7 @@ export default function App() {
       timestamp: 'เมื่อสักครู่',
       read: false,
       recipientLineId: currentUser.lineUserId,
+      recipientUserId: currentUser.id,
     };
     triggerLinePush(notif);
   };
@@ -560,10 +669,12 @@ export default function App() {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    markNotificationRead(id, currentUser.id); // Firestore: notifications
   };
 
   const handleClearNotifications = () => {
     setNotifications([]);
+    clearNotifications(currentUser.id); // Firestore: notifications
   };
 
   // STEP 1: If not logged in, render the Landing Hero requiring real LINE Login
@@ -593,10 +704,16 @@ export default function App() {
   }
 
   // Active user filtered requests
+  // ผู้ใช้ทั่วไปเห็น: (1) คำขอยืมที่ตัวเป็นผู้ยืม และ (2) คำขอยืมของของที่ตัวเป็นเจ้าของ (เพื่ออนุมัติ/ปฏิเสธ)
   const userRequests =
     currentUser.role === 'admin'
       ? requests
-      : requests.filter((r) => r.borrowerId === currentUser.id || r.borrowerLineId === currentUser.lineUserId);
+      : requests.filter(
+          (r) =>
+            r.borrowerId === currentUser.id ||
+            r.borrowerLineId === currentUser.lineUserId ||
+            isRequestManager(r),
+        );
 
   const activeBorrows = userRequests.filter(
     (r) => r.status === 'borrowed' || r.status === 'overdue'
@@ -657,6 +774,7 @@ export default function App() {
         <RequestHistoryView
           requests={userRequests}
           currentUser={currentUser}
+          canManageRequest={isRequestManager}
           onApproveRequest={handleApproveRequest}
           onRejectRequest={handleRejectRequest}
           onReturnRequest={handleReturnItem}
@@ -731,6 +849,7 @@ export default function App() {
           onUpdateUser={(updated) => {
             setCurrentUser(updated);
             setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+            saveUser(updated); // Firestore: users
           }}
           userRequests={userRequests}
         />

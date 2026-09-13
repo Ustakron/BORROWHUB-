@@ -6,6 +6,8 @@ import { SafeImage } from './SafeImage';
 interface RequestHistoryViewProps {
   requests: BorrowRequest[];
   currentUser: User;
+  // มีแค่เจ้าของของ (หรือ admin) เท่านั้นที่อนุมัติ/ปฏิเสธคำขอยืมของของตนเองได้
+  canManageRequest: (req: BorrowRequest) => boolean;
   onApproveRequest: (requestId: string) => void;
   onRejectRequest: (requestId: string, reason?: string) => void;
   onReturnRequest: (requestId: string) => void;
@@ -16,6 +18,7 @@ interface RequestHistoryViewProps {
 export const RequestHistoryView: React.FC<RequestHistoryViewProps> = ({
   requests,
   currentUser,
+  canManageRequest,
   onApproveRequest,
   onRejectRequest,
   onReturnRequest,
@@ -234,8 +237,8 @@ export const RequestHistoryView: React.FC<RequestHistoryViewProps> = ({
 
                 {/* Interactive Action Buttons */}
                 <div className="flex items-center gap-2 shrink-0">
-                  {/* Step 9 Approval actions (Accessible to Admin or simulated teacher mode) */}
-                  {req.status === 'pending' && (
+                  {/* Step 9 Approval actions — มีแค่เจ้าของของ (หรือ admin) เท่านั้นยังก Button */}
+                  {req.status === 'pending' && canManageRequest(req) && (
                     <>
                       {rejectingId === req.id ? (
                         <div className="flex items-center gap-2 animate-in fade-in">
