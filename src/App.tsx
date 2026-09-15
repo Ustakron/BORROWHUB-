@@ -389,8 +389,8 @@ export default function App() {
       .forEach((owner) => {
         const ownerNotif: LineNotification = {
           id: `notif-${Date.now()}-${owner.id}`,
-          title: `New borrow request for your item: ${requestData.itemName}`,
-          message: `${requestData.borrowerName} (${requestData.borrowerGrade}/${requestData.borrowerRoom}) wants to borrow "${requestData.itemName}" on ${requestData.borrowDate} (${requestData.borrowPeriod}). Open BORROW HUB to approve or reject.`,
+          title: `📋 มีคำขอยืมของคุณ: ${requestData.itemName}`,
+          message: `${requestData.borrowerName} (${requestData.borrowerGrade}/${requestData.borrowerRoom}) ขอยืม "${requestData.itemName}"\nวันยืม: ${requestData.borrowDate} (${requestData.borrowPeriod})\nคืน: ${requestData.returnDate} (${requestData.returnPeriod})\nรับของที่: ${requestData.pickupLocation}\nเหตุผล: ${requestData.reason}\n\nเปิดแอป BORROW HUB เพื่ออนุมัติ (Approve) หรือปฏิเสธ (Reject) คำขอนี้`,
           type: 'borrow_request',
           timestamp: pushMsg.timestamp,
           read: false,
@@ -410,6 +410,9 @@ export default function App() {
   const isRequestManager = (req: BorrowRequest): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
+    // เช็คจาก ownerId ที่แปะไว้บนตัวคำขอก่อน (ข้อมูลจริง ณ ตอนสร้างคำขอ — เชื่อถือได้แม้ catalog ยังโหลดไม่ครบ)
+    if (req.ownerId && req.ownerId === currentUser.id) return true;
+    // fallback: เช็คจาก item ใน catalog (สำหรับคำขอเก่าที่ไม่มี ownerId บนตัวคำขอ)
     const item = items.find((i) => i.id === req.itemId);
     return Boolean(item && item.ownerId && item.ownerId === currentUser.id);
   };
